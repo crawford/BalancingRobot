@@ -15,7 +15,7 @@ Additionally, the robotic system will attempt to keep itself centered over a ref
 
 The form of the robot will be a small table-top platform with two wheels mounted underneath a short body. The body will house the accelerometer, motor controllers, power link, and communication link to the purple box.
 
-Time permitting; the target reference point will be dynamically changed. This could be done through a simple keyboard controller which allows the user to “drive” the robot back and forth.
+Time permitting; the target reference point will be dynamically changed. This could be done through a simple keyboard controller which allows the user to "drive" the robot back and forth.
 
 ### Resources needed:
 * Power supply
