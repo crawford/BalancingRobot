@@ -16,6 +16,7 @@
 #include "atd.h"
 #include "dac.h"
 #include "transform.h"
+#include "pwm.h"
 
 #define INPUT_BUF_LEN 50
 
@@ -58,22 +59,8 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	// Initialize hardware.
-	dac_init(&args);
-	atd_init(&args);
-
-	// Setup calculation timer.
-	struct sigevent event;
-	SIGEV_THREAD_INIT(&event, &calc_thread, &args, NULL);
-
-	timer_t timer;
-	timer_create(CLOCK_REALTIME, &event, &timer);
-
-	struct timespec millisec = { .tv_sec = 0, .tv_nsec = args.calc_interval };
-	struct timespec zero = { .tv_sec = 0, .tv_nsec = 0 };
-	struct itimerspec time_run = { .it_value = millisec, .it_interval = millisec };
-	struct itimerspec time_stop = { .it_value = zero, .it_interval = zero };
-	timer_settime(timer, 0, &time_stop, NULL);
+	pwm_t pwm;
+	pwm_init(&pwm, 127);
 
 	char input[INPUT_BUF_LEN];
 	while (1) {
@@ -81,39 +68,6 @@ int main(int argc, char *argv[]) {
 		fgets(input, INPUT_BUF_LEN, stdin);
 		trim(input);
 
-		if (strncmp(input, "start", INPUT_BUF_LEN) == 0) {
-			timer_settime(timer, 0, &time_run, NULL);
-		} else if (strncmp(input, "stop", INPUT_BUF_LEN) == 0) {
-			timer_settime(timer, 0, &time_stop, NULL);
-		} else if (strncmp(input, "logio", INPUT_BUF_LEN) == 0) {
-			if (args.fd == NULL) {
-				printf("filename> ");
-				fgets(input, INPUT_BUF_LEN, stdin);
-				trim(input);
-				args.fd = fopen(input, "a");
-			} else {
-				printf("Error: Already logging\n");
-			}
-		} else if (strncmp(input, "stopiolog", INPUT_BUF_LEN) == 0) {
-			if (args.fd != NULL) {
-				fclose(args.fd);
-				args.fd = NULL;
-			} else {
-				printf("Error: Not logging\n");
-			}
-		} else if (strncmp(input, "quit", INPUT_BUF_LEN) == 0) {
-			break;
-		} else if (strncmp(input, "setp ", 5) == 0) {
-			Kp = atof(input + 5);
-		} else if (strncmp(input, "seti ", 5) == 0) {
-			Ki = atof(input + 5);
-		} else if (strncmp(input, "setd ", 5) == 0) {
-			Kd = atof(input + 5);
-		} else if (strncmp(input, "setref ", 7) == 0) {
-			args.ref = atof(input + 7);
-		} else {
-			printf("Invalid command (start, stop, logio, stopiolog, quit)\n");
-		}
 	}
 
 	return EXIT_SUCCESS;

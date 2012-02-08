@@ -9,6 +9,8 @@
 #define PWM_H_
 
 #include <stdint.h>
+#include <time.h>
+#include <pthread.h>
 
 typedef struct{
 	uintptr_t handle;
