@@ -17,6 +17,7 @@
 #include "dac.h"
 #include "transform.h"
 #include "pwm.h"
+#include "encoder.h"
 
 #define INPUT_BUF_LEN 50
 
@@ -61,6 +62,8 @@ int main(int argc, char *argv[]) {
 
 	pwm_t pwm;
 	pwm_init(&pwm, 127);
+
+	init_encoder();
 
 	char input[INPUT_BUF_LEN];
 	while (1) {
