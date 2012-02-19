@@ -16,9 +16,12 @@
 #include <sys/mman.h>     /* for mmap_device_io() */
 #include <stdio.h>
 
-#define PWM_PERIOD 500000    // 2KHz
+#define PWM_PERIOD 1000000    // 2KHz
 
-#define CLOCK_PERIOD 50000    // 20KHz
+#define CLOCK_PERIOD 20000    // 20KHz
+
+#define PWM_BIT_MASK   0x01
+#define PORT_A_DIR_BIT 0x10
 
 #define PORT_LENGTH 1
 #define CODE_TIMER 1
@@ -67,22 +70,26 @@ void *pwm_thread(void *arg){
 	pwm_t *pwm = (pwm_t*)arg;
 	for(;;){
 		//SET PORT HIGH
-		out8(pwm->handle, in8(pwm->handle) | 0x01);
+		if(pwm->highWait != 0){
+			out8(pwm->handle, in8(pwm->handle) | PWM_BIT_MASK);
 
-		// Setup the timer data.
-		pwm->timer.it_value.tv_nsec = pwm->highWait;
-		// Start the timer.
-		timer_settime(pwm->timerid, 0, &pwm->timer, NULL);
-		getPulse();
+			// Setup the timer data.
+			pwm->timer.it_value.tv_nsec = pwm->highWait;
+			// Start the timer.
+			timer_settime(pwm->timerid, 0, &pwm->timer, NULL);
+			getPulse();
+		}
 
 		//SET PORT LOW
-		out8(pwm->handle, in8(pwm->handle) & ~0x01);
+		if(pwm->lowWait != 0){
+			out8(pwm->handle, in8(pwm->handle) & ~PWM_BIT_MASK);
 
-		// Setup the timer data.
-		pwm->timer.it_value.tv_nsec = pwm->lowWait;
-		// Start the timer.
-		timer_settime(pwm->timerid, 0, &pwm->timer, NULL);
-		getPulse();
+			// Setup the timer data.
+			pwm->timer.it_value.tv_nsec = pwm->lowWait;
+			// Start the timer.
+			timer_settime(pwm->timerid, 0, &pwm->timer, NULL);
+			getPulse();
+		}
 	}
 
 	return NULL;
@@ -105,7 +112,7 @@ pwm_t *pwm_init(pwm_t *pwm, uint8_t duty){
 	uintptr_t dirHandle = mmap_device_io(PORT_LENGTH, DIR_ADDRESS);
 	pwm->handle = mmap_device_io(PORT_LENGTH, PORT_A_ADDRESS);
 
-	out8(dirHandle, in8(dirHandle) & ~0x10);
+	out8(dirHandle, in8(dirHandle) & ~PORT_A_DIR_BIT);
 
 	if((chid = ChannelCreate(0)) == -1){
 		fprintf(stderr, "Couldn't create channel!\n");
@@ -153,7 +160,7 @@ pwm_t *pwm_init(pwm_t *pwm, uint8_t duty){
 
 /**
  * Sets the PWM duty cycle.
- * @param pwm The pwm_t stucture.
+ * @param pwm The pwm_t structure.
  * @param duty The new duty cycle (0-255).
  */
 void pwm_set(pwm_t *pwm, uint8_t duty){
