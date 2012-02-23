@@ -18,6 +18,7 @@
 #include "transform.h"
 #include "pwm.h"
 #include "encoder.h"
+#include "accelerometer.h"
 
 #define INPUT_BUF_LEN 50
 
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
 	pwm_init(&pwm, 127);
 
 	init_encoder();
+	init_accelerometer();
 
 	char input[INPUT_BUF_LEN];
 	while (1) {

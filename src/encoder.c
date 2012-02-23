@@ -13,13 +13,15 @@
 #include <stdio.h>
 #include <atomic.h>
 #include "encoder.h"
+#include "isr.h"
 
 //Encoder -> pins 17 and 18
 
 volatile unsigned int count = 0;
 volatile unsigned char prev = 0;
 
-const struct sigevent* _isr_io(void* area, int id) {
+void encoder_isr() {
+	printf("en isr\n");
 	unsigned char port = in8(PORT_C_ADDRESS) & 0x03;
 
 	if (prev == 0x00 && port == 0x01) {
@@ -33,8 +35,6 @@ const struct sigevent* _isr_io(void* area, int id) {
 
 	// Reset the IO interrupt
 	out8(BASE_ADDRESS, 0x02);
-
-	return NULL;
 }
 
 int init_encoder() {
@@ -48,10 +48,7 @@ int init_encoder() {
 	//Enabled IO interrupts
 	out8(DMA_CONTROL_ADDRESS, 0x02);
 
-	//Register the IO interrupt
-	if (InterruptAttach(IO_INTERRUPT, &_isr_io, NULL, 0, 0) == -1) {
-		perror("InterruptAttach()");
-	}
+	init_isr(&encoder_isr);
 
 #if TEST_ENCODER
 	while (1) {
@@ -59,4 +56,5 @@ int init_encoder() {
 		sleep(0.5);
 	}
 #endif
+	return 0;
 }
