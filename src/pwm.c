@@ -14,6 +14,8 @@
 #include <hw/inout.h>     /* for in*() and out*() functions */
 #include <sys/neutrino.h> /* for ThreadCtl() */
 #include <sys/mman.h>     /* for mmap_device_io() */
+#include <sys/siginfo.h>  /* for SIGEV_PULSE_INIT */
+#include <time.h>
 #include <stdio.h>
 
 #define PWM_PERIOD 1000000    // 2KHz

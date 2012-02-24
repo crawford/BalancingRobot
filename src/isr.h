@@ -8,10 +8,12 @@
 #ifndef ISR_H
 #define ISR_H
 
-const struct sigevent* _isr_io(void* area, int id);
-void init_isr(void (*callback)());
+void init_isr();
+int register_isr(void (*callback)(), int interrupt_id);
 
-#define MAX_CALLBACKS 4
-#define IO_INTERRUPT 5
+#define DMA_ISR   3
+#define TMR_ISR   2
+#define DIO_ISR   1
+#define ADC_ISR   0
 
 #endif /* ISR_H */

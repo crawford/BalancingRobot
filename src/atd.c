@@ -11,8 +11,9 @@
 #include <unistd.h>       // for sleep()
 #include <stdint.h>       // for uintptr_t
 #include <hw/inout.h>     // for in*() and out*() functions
-#include <sys/mman.h>     // for mmap_device_io()
 #include <sys/neutrino.h> // for ThreadCtl()
+#include <time.h>
+#include <sys/mman.h>     // for mmap_device_io()
 
 #define PORT_LENGTH 1
 
@@ -74,9 +75,11 @@ void atd_init(transfer_args_t *args){
 	usleep(100);
 
 	// Disabling analog interrupts
-	uint8_t interruptStatus = in8(intHandle);
+	/*uint8_t interruptStatus = in8(intHandle);
 	interruptStatus = interruptStatus & 0xFE;
-	out8(intHandle, interruptStatus);
+	out8(intHandle, interruptStatus);*/
+
+	out8(intHandle, in8(intHandle) | 0x01);
 
 	// Setup the ATD timer.
 	struct sigevent event;
