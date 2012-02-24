@@ -19,4 +19,6 @@
 
 int init_encoder();
 
+extern volatile unsigned int current_position;
+
 #endif /* ENCODER_H_ */

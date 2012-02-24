@@ -70,6 +70,11 @@ int main(int argc, char *argv[]) {
 	init_encoder();
 	init_accelerometer();
 
+	while (1) {
+		printf("Pos: %d    Angle: %f\n", current_position, current_angle*180/3.14152653589);
+		sleep(1);
+	}
+
 	char input[INPUT_BUF_LEN];
 	while (1) {
 		printf("> ");

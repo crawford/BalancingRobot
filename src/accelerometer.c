@@ -38,7 +38,7 @@
 #define Z_MAX 29300
 
 #define PI 3.141592653589
-#define DEBUG
+//#define DEBUG
 
 static uintptr_t baseHandle;
 static uintptr_t lsbHandle;
@@ -50,6 +50,7 @@ static uintptr_t fthHandle;
 static uintptr_t statusHandle;
 static uintptr_t fifoDepthHandle;
 
+float current_angle;
 
 
 /**
@@ -80,8 +81,9 @@ void accel_thread(union sigval s) {
 
 		float Z = (value - (Z_MIN + Z_MAX)/2) * PI / (Z_MAX - Z_MIN);
 
+		current_angle = atan2f(Z, Y);
 #ifdef DEBUG
-		printf("Y: %0.2f  Z: %0.2f    Angle: %0.2f  FIFO: %d\n", Y/PI, Z/PI, atan2f(Z, Y)/PI*180, in8(fifoDepthHandle));
+		printf("Y: %0.2f  Z: %0.2f    Angle: %0.2f  FIFO: %d\n", Y/PI, Z/PI, current_angle/PI*180, in8(fifoDepthHandle));
 #endif
 	}
 

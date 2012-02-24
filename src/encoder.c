@@ -19,22 +19,20 @@
 
 //Encoder -> pins 17 and 18
 
-volatile unsigned int count = 0;
+volatile unsigned int current_position = 0;
 volatile unsigned char prev = 0;
 
 void encoder_isr() {
 	unsigned char port = in8(PORT_C_ADDRESS) & 0x03;
 
 	if (prev == 0x00 && port == 0x01) {
-		atomic_add(&count, 1);
+		atomic_add(&current_position, 1);
 	} else if (prev == 0x00 && port == 0x02) {
-		atomic_sub(&count, 1);
+		atomic_sub(&current_position, 1);
 	}
 
 	// This isn't necessarily atomic
 	prev = port;
-
-	atomic_add(&count, 1);
 }
 
 int init_encoder() {
@@ -45,7 +43,18 @@ int init_encoder() {
 	//Enabled IO interrupts
 	out8(DMA_CONTROL_ADDRESS, 0x02);
 
-	register_isr(&encoder_isr, DIO_ISR);
+	// Setup the ATD timer.
+	struct sigevent event;
+	SIGEV_THREAD_INIT(&event, &encoder_isr, NULL, NULL);
+
+	timer_t timer;
+	timer_create(CLOCK_REALTIME, &event, &timer);
+
+	struct timespec millisec = { .tv_sec = 0, .tv_nsec = 100000000 };
+	struct itimerspec time_run = { .it_value = millisec, .it_interval = millisec };
+	timer_settime(timer, 0, &time_run, NULL);
+
+	//register_isr(&encoder_isr, DIO_ISR);
 
 #ifdef TEST_ENCODER
 	while (1) {

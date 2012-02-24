@@ -8,7 +8,7 @@
 #ifndef ACCELEROMETER_H
 #define ACCELEROMETER_H
 
-#define X_PIN
+extern float current_angle;
 
 void init_accelerometer();
 
