@@ -38,8 +38,6 @@ void calc_thread(union sigval s);
 void trim(char *str);
 
 int main(int argc, char *argv[]) {
-	int i;
-
 	// Initialize transform structure
 	transfer_args_t args;
 	args.output = 0;
@@ -71,15 +69,6 @@ int main(int argc, char *argv[]) {
 	init_isr();
 	init_encoder();
 	init_accelerometer();
-
-	while (1) {
-		for (i = 0; i <= 15; i++) {
-			printf("%02d: x%02X  ", i, in8(BASE_ADDRESS + i));
-		}
-		printf("\n");
-		sleep(1);
-	}
-
 
 	char input[INPUT_BUF_LEN];
 	while (1) {
