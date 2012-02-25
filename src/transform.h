@@ -11,6 +11,7 @@
 
 #include <pthread.h>
 #include <stdio.h>
+#include "motor.h"
 
 typedef struct {
 	double inputs[3];
@@ -21,6 +22,7 @@ typedef struct {
 	long calc_interval;
 	pthread_mutex_t *mutex;
 	FILE *fd;
+	motor_t *motor;
 } transfer_args_t;
 
 #endif /* TRANSFORM_H_ */

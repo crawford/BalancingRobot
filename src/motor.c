@@ -14,8 +14,8 @@
 #define PORT_LENGTH 1
 
 #define PORT_A_DIR_BIT 0x10
-#define MOTOR_FWD_BIT  0x02
-#define MOTOR_RVS_BIT  0x04
+#define MOTOR_FWD_BIT  0x12
+#define MOTOR_RVS_BIT  0x24
 
 #define BASE_ADDRESS 0x280
 #define DIR_ADDRESS (BASE_ADDRESS+11)

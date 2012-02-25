@@ -22,7 +22,7 @@
 
 #define CLOCK_PERIOD 20000    // 20KHz
 
-#define PWM_BIT_MASK   0x01
+#define PWM_BIT_MASK   0x09
 #define PORT_A_DIR_BIT 0x10
 
 #define PORT_LENGTH 1
