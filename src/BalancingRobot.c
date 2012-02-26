@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 #include <time.h>
 #include <sys/neutrino.h> // for ThreadCtl()
 #include <sys/siginfo.h>
@@ -30,12 +31,26 @@
 
 #define INITIAL_REF 1.53
 
-double Kp = 0.00;
-double Ki = 0.00;
-double Kd = 0.00;
+static double Kp = 0.00;
+static double Ki = 0.00;
+static double Kd = 0.00;
+
+static pwm_t pwm;
+static motor_t motor;
 
 void calc_thread(union sigval s);
 void trim(char *str);
+
+/**
+ * SIGTERM handler to shutdown the PWM and motor.
+ * @param The number of the signal caught.
+ */
+void term(int signum){
+	if(signum == SIGTERM){
+		pwm_set(&pwm, 0);
+		motor_free(&motor);
+	}
+}
 
 int main(int argc, char *argv[]) {
 	// Initialize transform structure
@@ -63,15 +78,14 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	pwm_t pwm;
-	pwm_init(&pwm, 0);
-
-	init_isr();
+	//init_isr();
 	//init_encoder();
-	init_accelerometer();
+	accel_init();
 
-	motor_t motor;
+	// Initialize motor controller.
+	pwm_init(&pwm, 0);
 	motor_init(&motor, &pwm);
+	signal(SIGTERM, term);
 	args.motor = &motor;
 
 	// Setup calculation timer.
@@ -98,6 +112,8 @@ int main(int argc, char *argv[]) {
 			timer_settime(timer, 0, &time_run, NULL);
 		} else if (strncmp(input, "stop", INPUT_BUF_LEN) == 0) {
 			timer_settime(timer, 0, &time_stop, NULL);
+			pwm_set(&pwm, 0);
+			motor_free(&motor);
 		} else if (strncmp(input, "quit", INPUT_BUF_LEN) == 0) {
 			break;
 		} else if (strncmp(input, "setp ", 5) == 0) {
@@ -121,8 +137,8 @@ int main(int argc, char *argv[]) {
  * @param str The string to trim.
  */
 void trim(char *str) {
-	while (*str != '\n' && *str != '\r' && *str != NULL) str++;
-	*str = NULL;
+	while (*str != '\n' && *str != '\r' && *str != '\0') str++;
+	*str = '\0';
 }
 
 /**
@@ -135,7 +151,7 @@ void calc_thread(union sigval s) {
 
 	args->inputs[2] = args->inputs[1];
 	args->inputs[1] = args->inputs[0];
-	args->inputs[0] = current_angle - args->ref;
+	args->inputs[0] = accel_getangle() - args->ref;
 
 
 	// Calculate the next output

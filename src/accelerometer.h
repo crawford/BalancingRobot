@@ -8,8 +8,7 @@
 #ifndef ACCELEROMETER_H
 #define ACCELEROMETER_H
 
-extern float current_angle;
-
-void init_accelerometer();
+void accel_init();
+float accel_getangle();
 
 #endif /* ACCELEROMETER_H */

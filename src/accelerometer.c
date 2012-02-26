@@ -27,17 +27,26 @@
 #define FIFO_DEP_ADDRESS (BASE_ADDRESS + 6)	// FIFO Depth Register
 #define STATUS_ADDRESS   (BASE_ADDRESS + 7)	// Status Register
 
-#define ANALOG_GAIN		    0x06    // 0V - 5V
-#define ANALOG_HIGH_CHANNEL	0x02
-#define ANALOG_LOW_CHANNEL	0x01
+#define ANALOG_GAIN		     0x06    // 0V - 5V
+#define ANALOG_HIGH_CHANNEL	 0x02
+#define ANALOG_LOW_CHANNEL	 0x01
 #define ANALOG_CHANNEL_RANGE ((ANALOG_HIGH_CHANNEL << 4) | ANALOG_LOW_CHANNEL)
+
+#define AD_START   0x80
+#define AD_STATUS  0x80
+#define FIFO_RESET 0x10
+#define FIFO_THRESHOLD 20
 
 #define Y_MIN 12300
 #define Y_MAX 32300
 #define Z_MIN 8300
 #define Z_MAX 29300
 
-#define PI 3.141592653589
+#define ACCEL_PERIOD_NS 10000000
+#define ATD_TIMEOUT     10000
+
+#define NUM_SAMPLES 10
+
 //#define DEBUG
 
 static uintptr_t baseHandle;
@@ -50,8 +59,9 @@ static uintptr_t fthHandle;
 static uintptr_t statusHandle;
 static uintptr_t fifoDepthHandle;
 
-float current_angle;
-
+static float current_angle = 0;
+static float samples[NUM_SAMPLES];
+static int pointer = 0;
 
 /**
  * Thread to read values from the accelerometer.
@@ -62,8 +72,8 @@ void accel_thread(union sigval s) {
 
 	uint16_t value = 0;
 
-	for (waitReading = 0; waitReading < 10000; waitReading++) {
-		if ((in8(aigHandle) & 0x80) == 0) {
+	for (waitReading = 0; waitReading < ATD_TIMEOUT; waitReading++) {
+		if ((in8(aigHandle) & AD_STATUS) == 0) {
 			converted = 1;
 			break;
 		}
@@ -73,25 +83,39 @@ void accel_thread(union sigval s) {
 		value = in8(lsbHandle);
 		value |= in8(msbHandle) << 8;
 
-		float Y = (value - (Y_MIN + Y_MAX)/2) * PI / (Y_MAX - Y_MIN);
+		float Y = (value - (Y_MIN + Y_MAX)/2) * M_PI / (Y_MAX - Y_MIN);
 
 
 		value = in8(lsbHandle);
 		value |= in8(msbHandle) << 8;
 
-		float Z = (value - (Z_MIN + Z_MAX)/2) * PI / (Z_MAX - Z_MIN);
+		float Z = (value - (Z_MIN + Z_MAX)/2) * M_PI / (Z_MAX - Z_MIN);
 
-		current_angle = atan2f(Z, Y);
+		samples[pointer] = atan2f(Z, Y);
+		pointer++;
+		if(pointer >= NUM_SAMPLES){
+			pointer = 0;
+		}
+		float sum = 0;
+		int i;
+		for(i = 0; i < NUM_SAMPLES; i++){
+			sum += samples[i];
+		}
+		current_angle = sum/((float)NUM_SAMPLES);
+
 #ifdef DEBUG
-		printf("Y: %0.2f  Z: %0.2f    Angle: %0.2f  FIFO: %d\n", Y/PI, Z/PI, current_angle/PI*180, in8(fifoDepthHandle));
+		printf("Y: %0.2f  Z: %0.2f    Angle: %0.2f\n", Y, Z, current_angle);
 #endif
 	}
 
 	//Start the next conversion
-	out8(baseHandle, 0x80);
+	out8(baseHandle, AD_START);
 }
 
-void init_accelerometer() {
+/**
+ * Initialize the accelerometer.
+ */
+void accel_init() {
 	baseHandle = mmap_device_io(PORT_LENGTH, BASE_ADDRESS);
 	lsbHandle = mmap_device_io(PORT_LENGTH, LSB_ADDRESS);
 	msbHandle = mmap_device_io(PORT_LENGTH, MSB_ADDRESS);
@@ -102,9 +126,9 @@ void init_accelerometer() {
 	statusHandle = mmap_device_io(PORT_LENGTH, STATUS_ADDRESS);
 	fifoDepthHandle = mmap_device_io(PORT_LENGTH, FIFO_DEP_ADDRESS);
 
-	// Set the FIFO threshold to 20
-	out8(fthHandle, 20);
-	out8(baseHandle, 0x10);
+	// Set the FIFO threshold
+	out8(fthHandle, FIFO_THRESHOLD);
+	out8(baseHandle, FIFO_RESET);
 
 	// Initialize ATD Channel
 	out8(atdHandle, ANALOG_CHANNEL_RANGE);
@@ -123,7 +147,7 @@ void init_accelerometer() {
 	register_isr(&accelerometer_isr, ADC_ISR);*/
 
 	// Initiate the first conversion
-	out8(baseHandle, 0x80);
+	out8(baseHandle, AD_START);
 
 	// Setup the ATD timer.
 	struct sigevent event;
@@ -132,7 +156,15 @@ void init_accelerometer() {
 	timer_t timer;
 	timer_create(CLOCK_REALTIME, &event, &timer);
 
-	struct timespec millisec = { .tv_sec = 0, .tv_nsec = 100000000 };
+	struct timespec millisec = { .tv_sec = 0, .tv_nsec = ACCEL_PERIOD_NS };
 	struct itimerspec time_run = { .it_value = millisec, .it_interval = millisec };
 	timer_settime(timer, 0, &time_run, NULL);
+}
+
+/**
+ * Returns the current angle of the accelerometer.
+ * @return The angle in radians such that PI/2 is horizontal.
+ */
+float accel_getangle(){
+	return current_angle;
 }
