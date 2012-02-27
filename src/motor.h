@@ -2,11 +2,12 @@
  * motor.h
  *
  *  Created on: Feb 19, 2012
- *      Author: cpw9613
+ *      Author: Alex Crawford
+ *              Conlan Wesson
  */
 
-#ifndef MOTOR_H_
-#define MOTOR_H_
+#ifndef __MOTOR_H_
+#define __MOTOR_H_
 
 #include <stdint.h>
 #include "pwm.h"
@@ -22,4 +23,4 @@ void motor_reverse(motor_t*, uint8_t);
 void motor_brake(motor_t*);
 void motor_free(motor_t*);
 
-#endif /* MOTOR_H_ */
+#endif /* __MOTOR_H_ */

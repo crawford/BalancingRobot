@@ -2,34 +2,32 @@
  * pwm.c
  *
  *  Created on: Feb 6, 2012
- *      Author: cpw9613
+ *      Author: Alex Crawford
+ *              Conlan Wesson
  */
 
 #include "pwm.h"
 
-#include <pthread.h>
 #include <errno.h>
 #include <unistd.h>       /* for sleep() */
-#include <stdint.h>       /* for uintptr_t */
 #include <hw/inout.h>     /* for in*() and out*() functions */
 #include <sys/neutrino.h> /* for ThreadCtl() */
 #include <sys/mman.h>     /* for mmap_device_io() */
 #include <sys/siginfo.h>  /* for SIGEV_PULSE_INIT */
-#include <time.h>
 #include <stdio.h>
 
-#define PWM_PERIOD 1000000    // 2KHz
+#define PWM_PERIOD 1000000    // 1KHz
 
-#define CLOCK_PERIOD 20000    // 20KHz
+#define CLOCK_PERIOD 20000    // 50KHz
 
 #define PWM_BIT_MASK   0x09
 #define PORT_A_DIR_BIT 0x10
 
 #define PORT_LENGTH 1
-#define CODE_TIMER 1
+#define CODE_TIMER  1
 
-#define BASE_ADDRESS 0x280
-#define DIR_ADDRESS (BASE_ADDRESS+11)
+#define BASE_ADDRESS   0x280
+#define DIR_ADDRESS    (BASE_ADDRESS+11)
 #define PORT_A_ADDRESS (BASE_ADDRESS+8)
 
 typedef struct{

@@ -2,11 +2,12 @@
  * pwm.h
  *
  *  Created on: Feb 6, 2012
- *      Author: cpw9613
+ *      Author: Alex Crawford
+ *              Conlan Wesson
  */
 
-#ifndef PWM_H_
-#define PWM_H_
+#ifndef __PWM_H_
+#define __PWM_H_
 
 #include <stdint.h>
 #include <time.h>
@@ -24,4 +25,4 @@ typedef struct{
 pwm_t *pwm_init(pwm_t*, uint8_t);
 void pwm_set(pwm_t*, uint8_t);
 
-#endif /* PWM_H_ */
+#endif /* __PWM_H_ */

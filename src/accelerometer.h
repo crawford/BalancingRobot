@@ -2,13 +2,18 @@
  * accelerometer.h
  *
  *  Created on: Feb 23, 2012
- *      Author: abc4471
+ *      Author: Alex Crawford
+ *              Conlan Wesson
  */
 
-#ifndef ACCELEROMETER_H
-#define ACCELEROMETER_H
+#ifndef __ACCELEROMETER_H_
+#define __ACCELEROMETER_H_
 
-void accel_init();
+#include "transform.h"
+
+#define ACCEL_MAX_PERIOD 5000000 // 200Hz
+
+void accel_init(transfer_args_t *);
 float accel_getangle();
 
-#endif /* ACCELEROMETER_H */
+#endif /* __ACCELEROMETER_H_ */

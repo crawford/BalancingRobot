@@ -2,12 +2,12 @@
  * motor.c
  *
  *  Created on: Feb 19, 2012
- *      Author: cpw9613
+ *      Author: Alex Crawford
+ *              Conlan Wesson
  */
 
 #include "motor.h"
 
-#include <stdint.h>       /* for uintptr_t */
 #include <hw/inout.h>     /* for in*() and out*() functions */
 #include <sys/mman.h>     /* for mmap_device_io() */
 
@@ -30,12 +30,15 @@
 motor_t *motor_init(motor_t *motor, pwm_t *pwm){
 	motor->pwm = pwm;
 
+	// Stop the PWM.
 	pwm_set(motor->pwm, 0);
 
 	uintptr_t dirHandle = mmap_device_io(PORT_LENGTH, DIR_ADDRESS);
 	motor->handle = mmap_device_io(PORT_LENGTH, PORT_A_ADDRESS);
+	// Set port A as output.
 	out8(dirHandle, in8(dirHandle) & ~PORT_A_DIR_BIT);
 
+	// Clear the controller bits.
 	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
 
 	return motor;
@@ -48,7 +51,9 @@ motor_t *motor_init(motor_t *motor, pwm_t *pwm){
  */
 void motor_forward(motor_t *motor, uint8_t speed){
 	pwm_set(motor->pwm, speed);
+	// Clear the controller bits.
 	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
+	// Set forward bit.
 	out8(motor->handle, in8(motor->handle) | MOTOR_FWD_BIT);
 }
 
@@ -59,7 +64,9 @@ void motor_forward(motor_t *motor, uint8_t speed){
  */
 void motor_reverse(motor_t *motor, uint8_t speed){
 	pwm_set(motor->pwm, speed);
+	// Clear the controller bits.
 	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
+	// Set reverse bit.
 	out8(motor->handle, in8(motor->handle) | MOTOR_RVS_BIT);
 }
 
@@ -69,6 +76,7 @@ void motor_reverse(motor_t *motor, uint8_t speed){
  */
 void motor_brake(motor_t *motor){
 	pwm_set(motor->pwm, 0);
+	// Set both controller bits.
 	out8(motor->handle, in8(motor->handle) | (MOTOR_FWD_BIT | MOTOR_RVS_BIT));
 }
 
@@ -78,5 +86,6 @@ void motor_brake(motor_t *motor){
  */
 void motor_free(motor_t *motor){
 	pwm_set(motor->pwm, 0);
+	// Clear the controller bits.
 	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
 }

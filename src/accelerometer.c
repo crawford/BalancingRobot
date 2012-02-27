@@ -2,9 +2,11 @@
  * accelerometer.c
  *
  *  Created on: Feb 23, 2012
- *      Author: abc4471
+ *      Author: Alex Crawford
+ *              Conlan Wesson
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>       // for uintptr_t
 #include <hw/inout.h>     // for in*() and out*() functions
@@ -13,7 +15,6 @@
 #include <time.h>
 #include <math.h>
 #include "accelerometer.h"
-#include "isr.h"
 
 #define PORT_LENGTH     1
 
@@ -42,8 +43,7 @@
 #define Z_MIN 8300
 #define Z_MAX 29300
 
-#define ACCEL_PERIOD_NS 10000000
-#define ATD_TIMEOUT     10000
+#define ATD_TIMEOUT 10000
 
 #define NUM_SAMPLES 10
 
@@ -59,42 +59,46 @@ static uintptr_t fthHandle;
 static uintptr_t statusHandle;
 static uintptr_t fifoDepthHandle;
 
+static transfer_args_t *args;
 static float current_angle = 0;
 static float samples[NUM_SAMPLES];
-static int pointer = 0;
+static int sample_index = 0;
 
 /**
  * Thread to read values from the accelerometer.
  */
-void accel_thread(union sigval s) {
+void accel_thread(union sigval s){
 	int waitReading;
-	int converted = 0;
+	bool converted = false;
 
-	uint16_t value = 0;
-
-	for (waitReading = 0; waitReading < ATD_TIMEOUT; waitReading++) {
+	// Wait for conversion to complete.
+	for(waitReading = 0; waitReading < ATD_TIMEOUT; waitReading++){
 		if ((in8(aigHandle) & AD_STATUS) == 0) {
-			converted = 1;
+			converted = true;
 			break;
 		}
 	}
 
-	if (converted) {
+	if(converted){
+		uint16_t value = 0;
+
+		// Read Y axis.
 		value = in8(lsbHandle);
 		value |= in8(msbHandle) << 8;
-
 		float Y = (value - (Y_MIN + Y_MAX)/2) * M_PI / (Y_MAX - Y_MIN);
 
-
+		// Read Z axis.
 		value = in8(lsbHandle);
 		value |= in8(msbHandle) << 8;
-
 		float Z = (value - (Z_MIN + Z_MAX)/2) * M_PI / (Z_MAX - Z_MIN);
 
-		samples[pointer] = atan2f(Z, Y);
-		pointer++;
-		if(pointer >= NUM_SAMPLES){
-			pointer = 0;
+		// Calculate current angle.
+		samples[sample_index] = atan2f(Z, Y);
+		sample_index++;
+
+		// Average the last several values to reduce noise.
+		if(sample_index >= NUM_SAMPLES){
+			sample_index = 0;
 		}
 		float sum = 0;
 		int i;
@@ -102,6 +106,15 @@ void accel_thread(union sigval s) {
 			sum += samples[i];
 		}
 		current_angle = sum/((float)NUM_SAMPLES);
+
+		// Record new reading.
+		pthread_mutex_lock(args->mutex);
+
+		args->inputs[2] = args->inputs[1];
+		args->inputs[1] = args->inputs[0];
+		args->inputs[0] = current_angle - args->ref;
+
+		pthread_mutex_unlock(args->mutex);
 
 #ifdef DEBUG
 		printf("Y: %0.2f  Z: %0.2f    Angle: %0.2f\n", Y, Z, current_angle);
@@ -114,8 +127,11 @@ void accel_thread(union sigval s) {
 
 /**
  * Initialize the accelerometer.
+ * @param arg The transform function arguments structure.
  */
-void accel_init() {
+void accel_init(transfer_args_t *arg){
+	args = arg;
+
 	baseHandle = mmap_device_io(PORT_LENGTH, BASE_ADDRESS);
 	lsbHandle = mmap_device_io(PORT_LENGTH, LSB_ADDRESS);
 	msbHandle = mmap_device_io(PORT_LENGTH, MSB_ADDRESS);
@@ -156,8 +172,8 @@ void accel_init() {
 	timer_t timer;
 	timer_create(CLOCK_REALTIME, &event, &timer);
 
-	struct timespec millisec = { .tv_sec = 0, .tv_nsec = ACCEL_PERIOD_NS };
-	struct itimerspec time_run = { .it_value = millisec, .it_interval = millisec };
+	struct timespec time = { .tv_sec = 0, .tv_nsec = args->in_interval };
+	struct itimerspec time_run = { .it_value = time, .it_interval = time };
 	timer_settime(timer, 0, &time_run, NULL);
 }
 

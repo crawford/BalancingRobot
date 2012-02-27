@@ -1,12 +1,12 @@
 /*
- * PID.c
+ * BalancingRobot.c
  *
  *  Created on: Jan 20, 2012
  *      Author: Alex Crawford
  *              Conlan Wesson
  */
-#include <hw/inout.h>     // for in*() and out*() functions
 
+#include <hw/inout.h>     // for in*() and out*() functions
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,18 +15,14 @@
 #include <time.h>
 #include <sys/neutrino.h> // for ThreadCtl()
 #include <sys/siginfo.h>
-#include "atd.h"
-#include "dac.h"
 #include "transform.h"
 #include "pwm.h"
-#include "encoder.h"
 #include "accelerometer.h"
-#include "isr.h"
 
 #define INPUT_BUF_LEN 50
 
 #define OUTPUT_INTERVAL_NS 10000000
-#define INPUT_INTERVAL_NS  10000000
+#define INPUT_INTERVAL_NS  ACCEL_MAX_PERIOD
 #define CALC_INTERVAL_NS   10000000
 
 #define INITIAL_REF 1.53
@@ -49,6 +45,7 @@ void term(int signum){
 	if(signum == SIGTERM){
 		pwm_set(&pwm, 0);
 		motor_free(&motor);
+		exit(EXIT_SUCCESS);
 	}
 }
 
@@ -78,9 +75,8 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	//init_isr();
-	//init_encoder();
-	accel_init();
+	// Initialize the accelerometer.
+	accel_init(&args);
 
 	// Initialize motor controller.
 	pwm_init(&pwm, 0);
@@ -147,12 +143,7 @@ void trim(char *str) {
 void calc_thread(union sigval s) {
 	transfer_args_t *args = s.sival_ptr;
 
-	//pthread_mutex_lock(args->mutex);
-
-	args->inputs[2] = args->inputs[1];
-	args->inputs[1] = args->inputs[0];
-	args->inputs[0] = accel_getangle() - args->ref;
-
+	pthread_mutex_lock(args->mutex);
 
 	// Calculate the next output
 	args->output = args->output + (Kp + Ki + Kd)*(args->inputs[0]) - (Kp + 2*Kd)*(args->inputs[1]) + Kd*(args->inputs[2]);
@@ -161,7 +152,7 @@ void calc_thread(union sigval s) {
 	else if (args->output < -1)
 		args->output = -1;
 
-	//printf("ATDin: %lf  out: %lf\n", args->inputs[0], args->output);
+	printf("ATDin: %lf  out: %lf\n", args->inputs[0], args->output);
 
 	// Write to log file.
 	if (args->fd != NULL) {
@@ -170,9 +161,9 @@ void calc_thread(union sigval s) {
 		fprintf(args->fd, "%ld.%03ld, %lf, %lf\n", (long int)time.tv_sec, time.tv_nsec/1000000, args->inputs[0], args->output);
 	}
 
-	//pthread_mutex_unlock(args->mutex);
+	pthread_mutex_unlock(args->mutex);
 
-
+	// Set the motor outputs.
 	if (args->output < 0) {
 		motor_forward(args->motor, (-args->output)*255);
 	} else {

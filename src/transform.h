@@ -6,8 +6,8 @@
  *              Conlan Wesson
  */
 
-#ifndef TRANSFORM_H_
-#define TRANSFORM_H_
+#ifndef __TRANSFORM_H_
+#define __TRANSFORM_H_
 
 #include <pthread.h>
 #include <stdio.h>
@@ -25,4 +25,4 @@ typedef struct {
 	motor_t *motor;
 } transfer_args_t;
 
-#endif /* TRANSFORM_H_ */
+#endif /* __TRANSFORM_H_ */
