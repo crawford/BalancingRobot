@@ -11,7 +11,7 @@
 
 #include "transform.h"
 
-#define ACCEL_MAX_PERIOD 5000000 // 200Hz
+#define ACCEL_MAX_PERIOD 3334000 // ~300Hz
 
 void accel_init(transfer_args_t *);
 float accel_getangle();

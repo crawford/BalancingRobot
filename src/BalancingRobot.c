@@ -16,14 +16,16 @@
 #include <sys/neutrino.h> // for ThreadCtl()
 #include <sys/siginfo.h>
 #include "transform.h"
-#include "pwm.h"
+#include "dio.h"
 #include "accelerometer.h"
+#include "pwm.h"
 
 #define INPUT_BUF_LEN 50
 
-#define OUTPUT_INTERVAL_NS 10000000
+#define OUTPUT_INTERVAL_NS 33334000  // ~30Hz
 #define INPUT_INTERVAL_NS  ACCEL_MAX_PERIOD
-#define CALC_INTERVAL_NS   10000000
+
+#define CENTER_TOLERANCE 0.005
 
 #define INITIAL_REF 1.53
 
@@ -59,7 +61,6 @@ int main(int argc, char *argv[]) {
 	args.ref = INITIAL_REF;
 	args.out_interval = OUTPUT_INTERVAL_NS;
 	args.in_interval = INPUT_INTERVAL_NS;
-	args.calc_interval = CALC_INTERVAL_NS;
 	args.fd = NULL;
 	args.mutex = malloc(sizeof(pthread_mutex_t));
 	if(args.mutex == NULL){
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]) {
 	accel_init(&args);
 
 	// Initialize motor controller.
+	dio_init();
 	pwm_init(&pwm, 0);
 	motor_init(&motor, &pwm);
 	signal(SIGTERM, term);
@@ -91,7 +93,7 @@ int main(int argc, char *argv[]) {
 	timer_t timer;
 	timer_create(CLOCK_REALTIME, &event, &timer);
 
-	struct timespec millisec = { .tv_sec = 0, .tv_nsec = args.calc_interval };
+	struct timespec millisec = { .tv_sec = 0, .tv_nsec = args.out_interval };
 	struct timespec zero = { .tv_sec = 0, .tv_nsec = 0 };
 	struct itimerspec time_run = { .it_value = millisec, .it_interval = millisec };
 	struct itimerspec time_stop = { .it_value = zero, .it_interval = zero };
@@ -147,10 +149,14 @@ void calc_thread(union sigval s) {
 
 	// Calculate the next output
 	args->output = args->output + (Kp + Ki + Kd)*(args->inputs[0]) - (Kp + 2*Kd)*(args->inputs[1]) + Kd*(args->inputs[2]);
-	if (args->output > 1)
+	// Correct boundaries and center point.
+	if (args->output > 1){
 		args->output = 1;
-	else if (args->output < -1)
+	}else if (args->output < -1){
 		args->output = -1;
+	}else if(args->inputs[0] < CENTER_TOLERANCE && args->inputs[0] > -CENTER_TOLERANCE){
+		args->output = 0;
+	}
 
 	printf("ATDin: %lf  out: %lf\n", args->inputs[0], args->output);
 

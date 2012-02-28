@@ -14,7 +14,6 @@
 #include <pthread.h>
 
 typedef struct{
-	uintptr_t handle;
 	struct itimerspec timer;
 	timer_t timerid;
 	pthread_t thread;

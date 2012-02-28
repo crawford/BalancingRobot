@@ -108,13 +108,15 @@ void accel_thread(union sigval s){
 		current_angle = sum/((float)NUM_SAMPLES);
 
 		// Record new reading.
-		pthread_mutex_lock(args->mutex);
+		if(sample_index == 0){
+			pthread_mutex_lock(args->mutex);
 
-		args->inputs[2] = args->inputs[1];
-		args->inputs[1] = args->inputs[0];
-		args->inputs[0] = current_angle - args->ref;
+			args->inputs[2] = args->inputs[1];
+			args->inputs[1] = args->inputs[0];
+			args->inputs[0] = current_angle - args->ref;
 
-		pthread_mutex_unlock(args->mutex);
+			pthread_mutex_unlock(args->mutex);
+		}
 
 #ifdef DEBUG
 		printf("Y: %0.2f  Z: %0.2f    Angle: %0.2f\n", Y, Z, current_angle);

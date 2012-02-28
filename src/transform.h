@@ -19,7 +19,6 @@ typedef struct {
 	double ref;
 	long out_interval;
 	long in_interval;
-	long calc_interval;
 	pthread_mutex_t *mutex;
 	FILE *fd;
 	motor_t *motor;

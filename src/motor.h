@@ -14,7 +14,6 @@
 
 typedef struct {
 	pwm_t* pwm;
-	uintptr_t handle;
 } motor_t;
 
 motor_t* motor_init(motor_t*, pwm_t*);

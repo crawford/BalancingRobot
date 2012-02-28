@@ -8,18 +8,10 @@
 
 #include "motor.h"
 
-#include <hw/inout.h>     /* for in*() and out*() functions */
-#include <sys/mman.h>     /* for mmap_device_io() */
+#include "dio.h"
 
-#define PORT_LENGTH 1
-
-#define PORT_A_DIR_BIT 0x10
 #define MOTOR_FWD_BIT  0x12
 #define MOTOR_RVS_BIT  0x24
-
-#define BASE_ADDRESS   0x280
-#define DIR_ADDRESS    (BASE_ADDRESS+11)
-#define PORT_A_ADDRESS (BASE_ADDRESS+8)
 
 /**
  * Initialize the motor.
@@ -33,13 +25,8 @@ motor_t *motor_init(motor_t *motor, pwm_t *pwm){
 	// Stop the PWM.
 	pwm_set(motor->pwm, 0);
 
-	uintptr_t dirHandle = mmap_device_io(PORT_LENGTH, DIR_ADDRESS);
-	motor->handle = mmap_device_io(PORT_LENGTH, PORT_A_ADDRESS);
-	// Set port A as output.
-	out8(dirHandle, in8(dirHandle) & ~PORT_A_DIR_BIT);
-
 	// Clear the controller bits.
-	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
+	dio_clear(MOTOR_FWD_BIT | MOTOR_RVS_BIT);
 
 	return motor;
 }
@@ -52,9 +39,9 @@ motor_t *motor_init(motor_t *motor, pwm_t *pwm){
 void motor_forward(motor_t *motor, uint8_t speed){
 	pwm_set(motor->pwm, speed);
 	// Clear the controller bits.
-	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
+	dio_clear(MOTOR_RVS_BIT);
 	// Set forward bit.
-	out8(motor->handle, in8(motor->handle) | MOTOR_FWD_BIT);
+	dio_set(MOTOR_FWD_BIT);
 }
 
 /**
@@ -65,9 +52,9 @@ void motor_forward(motor_t *motor, uint8_t speed){
 void motor_reverse(motor_t *motor, uint8_t speed){
 	pwm_set(motor->pwm, speed);
 	// Clear the controller bits.
-	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
+	dio_clear(MOTOR_FWD_BIT);
 	// Set reverse bit.
-	out8(motor->handle, in8(motor->handle) | MOTOR_RVS_BIT);
+	dio_set(MOTOR_RVS_BIT);
 }
 
 /**
@@ -77,7 +64,7 @@ void motor_reverse(motor_t *motor, uint8_t speed){
 void motor_brake(motor_t *motor){
 	pwm_set(motor->pwm, 0);
 	// Set both controller bits.
-	out8(motor->handle, in8(motor->handle) | (MOTOR_FWD_BIT | MOTOR_RVS_BIT));
+	dio_set(MOTOR_FWD_BIT | MOTOR_RVS_BIT);
 }
 
 /**
@@ -87,5 +74,5 @@ void motor_brake(motor_t *motor){
 void motor_free(motor_t *motor){
 	pwm_set(motor->pwm, 0);
 	// Clear the controller bits.
-	out8(motor->handle, in8(motor->handle) & ~(MOTOR_FWD_BIT | MOTOR_RVS_BIT));
+	dio_clear(MOTOR_FWD_BIT | MOTOR_RVS_BIT);
 }

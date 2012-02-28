@@ -10,25 +10,18 @@
 
 #include <errno.h>
 #include <unistd.h>       /* for sleep() */
-#include <hw/inout.h>     /* for in*() and out*() functions */
 #include <sys/neutrino.h> /* for ThreadCtl() */
-#include <sys/mman.h>     /* for mmap_device_io() */
 #include <sys/siginfo.h>  /* for SIGEV_PULSE_INIT */
 #include <stdio.h>
+#include "dio.h"
 
 #define PWM_PERIOD 1000000    // 1KHz
 
 #define CLOCK_PERIOD 20000    // 50KHz
 
 #define PWM_BIT_MASK   0x09
-#define PORT_A_DIR_BIT 0x10
 
-#define PORT_LENGTH 1
 #define CODE_TIMER  1
-
-#define BASE_ADDRESS   0x280
-#define DIR_ADDRESS    (BASE_ADDRESS+11)
-#define PORT_A_ADDRESS (BASE_ADDRESS+8)
 
 typedef struct{
 	// Message to and from client.
@@ -71,7 +64,7 @@ void *pwm_thread(void *arg){
 	for(;;){
 		//SET PORT HIGH
 		if(pwm->highWait != 0){
-			out8(pwm->handle, in8(pwm->handle) | PWM_BIT_MASK);
+			dio_set(PWM_BIT_MASK);
 
 			// Setup the timer data.
 			pwm->timer.it_value.tv_nsec = pwm->highWait;
@@ -82,7 +75,7 @@ void *pwm_thread(void *arg){
 
 		//SET PORT LOW
 		if(pwm->lowWait != 0){
-			out8(pwm->handle, in8(pwm->handle) & ~PWM_BIT_MASK);
+			dio_clear(PWM_BIT_MASK);
 
 			// Setup the timer data.
 			pwm->timer.it_value.tv_nsec = pwm->lowWait;
@@ -108,11 +101,6 @@ pwm_t *pwm_init(pwm_t *pwm, uint8_t duty){
 
 	pwm->highWait = duty * PWM_PERIOD / 255;
 	pwm->lowWait = PWM_PERIOD - pwm->highWait;
-
-	uintptr_t dirHandle = mmap_device_io(PORT_LENGTH, DIR_ADDRESS);
-	pwm->handle = mmap_device_io(PORT_LENGTH, PORT_A_ADDRESS);
-
-	out8(dirHandle, in8(dirHandle) & ~PORT_A_DIR_BIT);
 
 	if((chid = ChannelCreate(0)) == -1){
 		fprintf(stderr, "Couldn't create channel!\n");
