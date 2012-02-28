@@ -37,9 +37,11 @@ motor_t *motor_init(motor_t *motor, pwm_t *pwm){
  * @param speed The duty cycle of the motor (0-255).
  */
 void motor_forward(motor_t *motor, uint8_t speed){
-	pwm_set(motor->pwm, speed);
 	// Clear the controller bits.
 	dio_clear(MOTOR_RVS_BIT);
+
+	pwm_set(motor->pwm, speed);
+
 	// Set forward bit.
 	dio_set(MOTOR_FWD_BIT);
 }
@@ -50,9 +52,11 @@ void motor_forward(motor_t *motor, uint8_t speed){
  * @param speed The duty cycle of the motor (0-255).
  */
 void motor_reverse(motor_t *motor, uint8_t speed){
-	pwm_set(motor->pwm, speed);
 	// Clear the controller bits.
 	dio_clear(MOTOR_FWD_BIT);
+
+	pwm_set(motor->pwm, speed);
+
 	// Set reverse bit.
 	dio_set(MOTOR_RVS_BIT);
 }
@@ -62,9 +66,10 @@ void motor_reverse(motor_t *motor, uint8_t speed){
  * @param motor The motor control structure.
  */
 void motor_brake(motor_t *motor){
-	pwm_set(motor->pwm, 0);
 	// Set both controller bits.
 	dio_set(MOTOR_FWD_BIT | MOTOR_RVS_BIT);
+
+	pwm_set(motor->pwm, 255);
 }
 
 /**
@@ -73,6 +78,7 @@ void motor_brake(motor_t *motor){
  */
 void motor_free(motor_t *motor){
 	pwm_set(motor->pwm, 0);
+
 	// Clear the controller bits.
 	dio_clear(MOTOR_FWD_BIT | MOTOR_RVS_BIT);
 }

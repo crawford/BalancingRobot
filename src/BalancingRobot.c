@@ -29,9 +29,9 @@
 
 #define INITIAL_REF 1.53
 
-static double Kp = 0.00;
-static double Ki = 0.00;
-static double Kd = 0.00;
+static double Kp = 8.6;
+static double Ki = 0.34;
+static double Kd = 0.82;
 
 static pwm_t pwm;
 static motor_t motor;
@@ -112,6 +112,22 @@ int main(int argc, char *argv[]) {
 			timer_settime(timer, 0, &time_stop, NULL);
 			pwm_set(&pwm, 0);
 			motor_free(&motor);
+		} else if (strncmp(input, "logio", INPUT_BUF_LEN) == 0) {
+			if (args.fd == NULL) {
+				printf("filename> ");
+				fgets(input, INPUT_BUF_LEN, stdin);
+				trim(input);
+				args.fd = fopen(input, "a");
+			} else {
+				printf("Error: Already logging\n");
+			}
+		} else if (strncmp(input, "stopiolog", INPUT_BUF_LEN) == 0) {
+			if (args.fd != NULL) {
+				fclose(args.fd);
+				args.fd = NULL;
+			} else {
+				printf("Error: Not logging\n");
+			}
 		} else if (strncmp(input, "quit", INPUT_BUF_LEN) == 0) {
 			break;
 		} else if (strncmp(input, "setp ", 5) == 0) {
@@ -158,7 +174,7 @@ void calc_thread(union sigval s) {
 		args->output = 0;
 	}
 
-	printf("ATDin: %lf  out: %lf\n", args->inputs[0], args->output);
+	//printf("ATDin: %lf  out: %lf\n", args->inputs[0], args->output);
 
 	// Write to log file.
 	if (args->fd != NULL) {
@@ -170,9 +186,9 @@ void calc_thread(union sigval s) {
 	pthread_mutex_unlock(args->mutex);
 
 	// Set the motor outputs.
-	if (args->output < 0) {
+	if(args->output < 0){
 		motor_forward(args->motor, (-args->output)*255);
-	} else {
+	}else{
 		motor_reverse(args->motor, args->output*255);
 	}
 }

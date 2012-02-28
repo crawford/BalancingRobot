@@ -7,6 +7,7 @@
 
 #include "dio.h"
 
+#include <atomic.h>
 #include <hw/inout.h>     /* for in*() and out*() functions */
 #include <sys/mman.h>     /* for mmap_device_io() */
 
@@ -25,17 +26,19 @@ static uint8_t value = 0;
 void dio_init(){
 	dirHandle = mmap_device_io(PORT_LENGTH, DIR_ADDRESS);
 	portHandle = mmap_device_io(PORT_LENGTH, PORT_A_ADDRESS);
+
 	// Set port A as output.
 	out8(dirHandle, in8(dirHandle) & ~PORT_A_DIR_BIT);
+
 	out8(portHandle, value);
 }
 
 void dio_set(uint8_t mask){
-	value |= mask;
+	atomic_set((unsigned*)&value, mask);
 	out8(portHandle, value);
 }
 
 void dio_clear(uint8_t mask){
-	value &= ~mask;
+	atomic_clr((unsigned*)&value, mask);
 	out8(portHandle, value);
 }
